@@ -1,0 +1,213 @@
+<script>
+document.addEventListener('click', async function (e) {
+  if (e.target.matches('.quick-add-to-cart')) {
+    e.preventDefault();
+
+    const button = e.target;
+    const variantId = button.getAttribute('data-variant-id');
+
+    button.disabled = true;
+    button.textContent = 'Adding...';
+
+    try {
+      // 1. Add the product to cart
+      const response = await fetch('/cart/add.js', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          items: [
+            {
+              id: parseInt(variantId),
+              quantity: 1,
+            },
+          ],
+        }),
+      });
+
+      if (!response.ok) throw new Error('Add to cart failed');
+
+      // 2. Re-fetch the cart drawer content (HTML)
+      const drawerResponse = await fetch('/?section_id=cart-drawer');
+      const drawerText = await drawerResponse.text();
+
+      // 3. Parse the new cart drawer HTML
+      const newDrawerHtml = new DOMParser()
+        .parseFromString(drawerText, 'text/html')
+        .querySelector('#CartDrawer');
+
+      // 4. Replace the existing drawer content
+      const currentDrawer = document.querySelector('#CartDrawer');
+      if (currentDrawer && newDrawerHtml) {
+        currentDrawer.replaceWith(newDrawerHtml);
+      }
+
+      // Optionally open the drawer if it's not already open
+      document.querySelector('cart-drawer')?.classList.add('is-open');
+
+    } catch (error) {
+      console.error('Quick add error:', error);
+    } finally {
+      button.disabled = false;
+      button.textContent = 'Add to Cart';
+    }
+  }
+});
+</script>
+
+<script>
+  function initUpsellSlider() {
+    const track = document.querySelector(".slider-track");
+    const prevBtn = document.querySelector(".slider-prev");
+    const nextBtn = document.querySelector(".slider-next");
+    const card = document.querySelector(".upsell-card");
+
+    if (!track || !prevBtn || !nextBtn || !card) return;
+
+    const scrollAmount = card.offsetWidth;
+
+    prevBtn.addEventListener("click", () => {
+      track.scrollBy({ left: -scrollAmount, behavior: "smooth" });
+    });
+
+    nextBtn.addEventListener("click", () => {
+      track.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    });
+  }
+
+  // document.addEventListener("DOMContentLoaded", function () {
+  //   initUpsellSlider();
+  // });
+
+   document.addEventListener("DOMContentLoaded", function () {
+    initUpsellSlider();
+
+    // Watch for updates to the cart drawer
+    const cartDrawer = document.querySelector('#CartDrawer');
+
+    if (cartDrawer) {
+      const observer = new MutationObserver(() => {
+        initUpsellSlider();
+      });
+
+      observer.observe(cartDrawer, {
+        childList: true,
+        subtree: true,
+      });
+    }
+  });
+  
+</script>
+
+ add this code above [drawer__footer]
+ 
+ 
+     {% assign collection = collections['upselll'] %}
+      {% if cart.item_count > 0 %}
+      <div class="upsell-wrapper">
+        <h3 class="upsell-title">You may also like</h3>
+        <div class="custom-upsell-slider">
+          <button class="slider-prev">‹</button>
+          <div class="slider-track">
+            {% for product in collection.products %}
+              <div class="upsell-card">
+                <div>
+                  <a href="{{ product.url }}">
+                    <img 
+                      src="{{ product.featured_image | image_url: width: 150, height: 150 }}" 
+                      width="150"
+                      height="150" 
+                      alt="{{ product.title }}" 
+                      loading="lazy"
+                    >
+                  </a>
+                </div>
+                <div>
+                  <p>{{ product.title }}</p>
+                  <p>{{ product.price | money }}</p>
+                  <button
+                    class="quick-add-to-cart"
+                    data-variant-id="{{ product.variants.first.id }}">
+                    Add to Cart
+                  </button>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+          <button class="slider-next">›</button>
+        </div>
+      </div>
+      {%- endif -%}
+
+
+      <style>
+        .upsell-wrapper {
+          margin-top: 20px;
+        }
+        
+        .upsell-title {
+          font-size: 20px;
+          font-weight: bold;
+          text-align: center;
+        }
+
+        .custom-upsell-slider {
+          position: relative;
+          display: flex;
+          align-items: center;
+          overflow: hidden;
+          padding-top: 20px
+        }
+        
+        .slider-track {
+          display: flex;
+          transition: transform 0.3s ease;
+          overflow-x: auto;
+          scroll-behavior: smooth;
+        }
+        
+        .upsell-card {
+          flex: 0 0 auto;
+          width: 100%;
+          background: #f8f8f8;
+          padding: 10px;
+          border-radius: 10px;
+          text-align: center;
+          display: flex;
+          align-items: center;
+        }
+        
+        .upsell-card img {
+          height : 150px !important
+        }
+        
+        .slider-prev {
+          right : 25px
+        }
+        
+        .slider-next {
+          right : 5px
+        }
+        
+        .slider-prev,
+        .slider-next {
+          border: none;
+          font-size: 35px;
+          cursor: pointer;
+          z-index: 10;
+          top: -25px;
+          position : absolute;
+        }
+        
+        .quick-add-to-cart {
+          margin-top: 10px;
+          padding-right: 10px;
+          padding-left: 10px;
+          border-radius: 10px;
+          background : #000;
+          color: white;
+        }
+
+      </style>
